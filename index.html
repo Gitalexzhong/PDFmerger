@@ -6,13 +6,60 @@
     <title>Local PDF Merger</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="text/babel" src="main.js"></script>
+    <div class="app">
+      <header class="app-header">
+        <h1>PDF Merger</h1>
+        <p>Merge PDFs locally in your browser. No uploads, no servers.</p>
+      </header>
+
+      <main class="app-main">
+        <section id="left-pane" class="pane">
+          <section id="drop-zone" class="drop-zone">
+            <div class="drop-zone-content">
+              <span class="drop-icon">📄</span>
+              <p class="drop-title">Drag and drop PDF files here</p>
+              <p class="drop-subtitle">or</p>
+              <button id="browse-btn" class="btn primary" type="button">Browse files</button>
+              <input id="file-input" type="file" accept="application/pdf" multiple hidden />
+              <p class="drop-hint">Drag files in list to reorder merge order.</p>
+            </div>
+          </section>
+
+          <section id="selected-panel" class="panel">
+            <div class="section-header">
+              <h2>Selected PDFs</h2>
+              <span id="file-count" class="badge">0 files</span>
+            </div>
+            <ul id="file-list" class="file-list"></ul>
+            <p id="empty-state" class="empty-state">No files yet. Add PDFs to begin creating merged preview.</p>
+          </section>
+        </section>
+
+        <section class="pane">
+          <section class="panel">
+            <div class="merge-row">
+              <div class="field">
+                <label for="output-name">Output file name</label>
+                <input id="output-name" type="text" placeholder="merged-YYYYMMDD-HHMMSS.pdf" />
+              </div>
+              <button id="merge-btn" class="btn primary" type="button" disabled>Merge and Download</button>
+            </div>
+            <p id="status" class="status"></p>
+          </section>
+
+          <section class="panel preview-panel">
+            <div class="section-header">
+              <h2>Merged Preview</h2>
+            </div>
+            <iframe id="preview-frame" class="preview-frame" title="Merged PDF preview"></iframe>
+            <div id="preview-empty" class="preview-empty">Merged preview appears here after adding at least one PDF.</div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script src="main.js"></script>
   </body>
 </html>
 
