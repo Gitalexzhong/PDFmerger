@@ -12,6 +12,10 @@
       <header class="app-header">
         <h1>PDF Merger</h1>
         <p>Merge PDFs locally in your browser. No uploads, no servers.</p>
+        <div class="header-actions">
+          <button id="info-btn" class="btn theme-btn" type="button">Info</button>
+          <button id="theme-toggle" class="btn theme-btn" type="button">Dark Mode</button>
+        </div>
       </header>
 
       <main class="app-main">
@@ -19,10 +23,10 @@
           <section id="drop-zone" class="drop-zone">
             <div class="drop-zone-content">
               <span class="drop-icon">📄</span>
-              <p class="drop-title">Drag and drop PDF files here</p>
+              <p class="drop-title">Drag and drop PDF or image files here</p>
               <p class="drop-subtitle">or</p>
               <button id="browse-btn" class="btn primary" type="button">Browse files</button>
-              <input id="file-input" type="file" accept="application/pdf" multiple hidden />
+              <input id="file-input" type="file" accept="application/pdf,image/*" multiple hidden />
               <p class="drop-hint">Drag files in list to reorder merge order.</p>
             </div>
           </section>
@@ -58,6 +62,27 @@
           </section>
         </section>
       </main>
+    </div>
+
+    <div id="info-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="info-title">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 id="info-title">About This App</h2>
+          <button id="close-info-btn" class="btn theme-btn" type="button">Close</button>
+        </div>
+        <p>This tool runs fully in your browser and never uploads your files.</p>
+        <div class="modal-actions">
+          <button id="share-link-btn" class="btn primary" type="button">Share Link</button>
+          <a
+            id="github-link"
+            class="btn theme-btn"
+            href="https://github.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GitHub</a
+          >
+        </div>
+      </div>
     </div>
     <script src="main.js"></script>
   </body>

@@ -3,6 +3,11 @@
   const leftPane = document.getElementById("left-pane");
   const fileInput = document.getElementById("file-input");
   const browseBtn = document.getElementById("browse-btn");
+  const infoBtn = document.getElementById("info-btn");
+  const closeInfoBtn = document.getElementById("close-info-btn");
+  const infoModal = document.getElementById("info-modal");
+  const shareLinkBtn = document.getElementById("share-link-btn");
+  const themeToggle = document.getElementById("theme-toggle");
   const fileList = document.getElementById("file-list");
   const selectedPanel = document.getElementById("selected-panel");
   const fileCount = document.getElementById("file-count");
@@ -23,6 +28,113 @@
   let leftPaneDragDepth = 0;
   let selectedPanelDragDepth = 0;
   let dropZoneDragDepth = 0;
+  const THEME_KEY = "pdf-merger-theme";
+
+  function isSupportedFile(file) {
+    return file.type === "application/pdf" || file.type.startsWith("image/");
+  }
+
+  function isImageType(file) {
+    return file.type.startsWith("image/");
+  }
+
+  function applyTheme(theme) {
+    const isDark = theme === "dark";
+    document.body.classList.toggle("dark-mode", isDark);
+    themeToggle.textContent = isDark ? "Light Mode" : "Dark Mode";
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem(THEME_KEY) || "light";
+    applyTheme(saved);
+  }
+
+  async function convertImageFileToPngBytes(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const width = img.naturalWidth || img.width;
+          const height = img.naturalHeight || img.height;
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            URL.revokeObjectURL(url);
+            reject(new Error("Canvas unavailable for image conversion."));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(async (blob) => {
+            URL.revokeObjectURL(url);
+            if (!blob) {
+              reject(new Error("Failed to convert image."));
+              return;
+            }
+            resolve(await blob.arrayBuffer());
+          }, "image/png");
+        } catch (error) {
+          URL.revokeObjectURL(url);
+          reject(error);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Unsupported image format."));
+      };
+      img.src = url;
+    });
+  }
+
+  async function addImageFileToPdf(mergedPdf, file, rotationDeg = 0) {
+    const lowerType = (file.type || "").toLowerCase();
+    let image;
+    if (lowerType === "image/jpeg" || lowerType === "image/jpg") {
+      image = await mergedPdf.embedJpg(await file.arrayBuffer());
+    } else if (lowerType === "image/png") {
+      image = await mergedPdf.embedPng(await file.arrayBuffer());
+    } else {
+      const pngBytes = await convertImageFileToPngBytes(file);
+      image = await mergedPdf.embedPng(pngBytes);
+    }
+    const width = image.width;
+    const height = image.height;
+    const normalizedRotation = ((rotationDeg % 360) + 360) % 360;
+    const isQuarterTurn = normalizedRotation === 90 || normalizedRotation === 270;
+    const pageWidth = isQuarterTurn ? height : width;
+    const pageHeight = isQuarterTurn ? width : height;
+    const page = mergedPdf.addPage([pageWidth, pageHeight]);
+
+    if (normalizedRotation === 0) {
+      page.drawImage(image, { x: 0, y: 0, width, height });
+    } else if (normalizedRotation === 90) {
+      page.drawImage(image, {
+        x: pageWidth,
+        y: 0,
+        width,
+        height,
+        rotate: window.PDFLib.degrees(90)
+      });
+    } else if (normalizedRotation === 180) {
+      page.drawImage(image, {
+        x: pageWidth,
+        y: pageHeight,
+        width,
+        height,
+        rotate: window.PDFLib.degrees(180)
+      });
+    } else if (normalizedRotation === 270) {
+      page.drawImage(image, {
+        x: 0,
+        y: pageHeight,
+        width,
+        height,
+        rotate: window.PDFLib.degrees(270)
+      });
+    }
+  }
 
   function getDraggedFileCount(dataTransfer) {
     if (!dataTransfer) return 0;
@@ -87,10 +199,17 @@
     const { PDFDocument } = window.PDFLib || {};
     if (!PDFDocument) throw new Error("PDF library failed to load.");
     const mergedPdf = await PDFDocument.create();
-    for (const file of inputFiles) {
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
-      const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-      pages.forEach((page) => mergedPdf.addPage(page));
+    for (const item of inputFiles) {
+      const file = item.file;
+      if (file.type === "application/pdf") {
+        const pdf = await PDFDocument.load(await file.arrayBuffer());
+        const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach((page) => mergedPdf.addPage(page));
+      } else if (file.type.startsWith("image/")) {
+        await addImageFileToPdf(mergedPdf, file, item.rotation || 0);
+      } else {
+        throw new Error(`Unsupported file: ${file.name}`);
+      }
     }
     return new Blob([await mergedPdf.save()], { type: "application/pdf" });
   }
@@ -233,7 +352,8 @@
 
   function renderList() {
     fileList.innerHTML = "";
-    files.forEach((file, index) => {
+    files.forEach((item, index) => {
+      const file = item.file;
       const li = document.createElement("li");
       li.className = "file-item";
       li.dataset.index = String(index);
@@ -248,6 +368,11 @@
         <div class="file-actions">
           <button class="order-btn" data-action="up" title="Move up">↑</button>
           <button class="order-btn" data-action="down" title="Move down">↓</button>
+          ${
+            isImageType(file)
+              ? `<button class="rotate-btn" title="Rotate image">↻ ${item.rotation || 0}°</button>`
+              : ""
+          }
           <button class="remove-btn" title="Remove file">✕</button>
         </div>
       `;
@@ -269,6 +394,14 @@
           animateListTransition();
         });
       });
+
+      const rotateBtn = li.querySelector(".rotate-btn");
+      if (rotateBtn) {
+        rotateBtn.addEventListener("click", () => {
+          files[index].rotation = ((files[index].rotation || 0) + 90) % 360;
+          refreshUI();
+        });
+      }
 
       fileList.appendChild(li);
     });
@@ -318,9 +451,11 @@
   }
 
   function addFiles(fileListObj) {
-    const incoming = Array.from(fileListObj).filter((f) => f.type === "application/pdf");
+    const incoming = Array.from(fileListObj)
+      .filter((f) => isSupportedFile(f))
+      .map((f) => ({ file: f, rotation: 0 }));
     if (incoming.length === 0) {
-      setStatus("Please select PDF files only.", "error");
+      setStatus("Please select PDF or image files.", "error");
       return;
     }
     const hadNoFiles = files.length === 0;
@@ -339,6 +474,46 @@
   fileInput.addEventListener("change", (e) => {
     if (e.target.files) addFiles(e.target.files);
     e.target.value = "";
+  });
+
+  themeToggle.addEventListener("click", () => {
+    const isDark = document.body.classList.contains("dark-mode");
+    const next = isDark ? "light" : "dark";
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+  });
+
+  async function copyShareLink() {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus("Link copied to clipboard.", "success");
+    } catch (err) {
+      const temp = document.createElement("textarea");
+      temp.value = url;
+      temp.style.position = "fixed";
+      temp.style.left = "-9999px";
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      temp.remove();
+      setStatus("Link copied to clipboard.", "success");
+    }
+  }
+
+  infoBtn.addEventListener("click", () => {
+    infoModal.classList.remove("hidden");
+  });
+  closeInfoBtn.addEventListener("click", () => {
+    infoModal.classList.add("hidden");
+  });
+  infoModal.addEventListener("click", (e) => {
+    if (e.target === infoModal) {
+      infoModal.classList.add("hidden");
+    }
+  });
+  shareLinkBtn.addEventListener("click", () => {
+    copyShareLink();
   });
 
   dropZone.addEventListener("dragover", (e) => {
@@ -469,6 +644,7 @@
   });
 
   outputName.value = "";
+  initTheme();
   refreshUI();
 })();
 

@@ -63,6 +63,64 @@ body {
   font-size: 0.98rem;
 }
 
+.theme-btn {
+  margin-top: 10px;
+  background: #e8eefb;
+  color: #1e3a8a;
+  border: 1px solid #c8daf8;
+}
+
+.header-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.header-actions .theme-btn {
+  margin-top: 10px;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1200;
+  padding: 20px;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.modal-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .app-main {
   width: 100%;
   max-width: 1180px;
@@ -350,6 +408,23 @@ body.drag-active {
   background: #e2ecff;
 }
 
+.rotate-btn {
+  border: 1px solid #c8daf8;
+  background: #eff5ff;
+  color: #1e3a8a;
+  border-radius: 8px;
+  min-width: 34px;
+  height: 24px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 6px;
+  font-size: 0.74rem;
+}
+
+.rotate-btn:hover {
+  background: #e2ecff;
+}
+
 .remove-btn {
   background: none;
   border: none;
@@ -504,6 +579,61 @@ body.drag-active {
   .pane {
     min-height: auto;
   }
+}
+
+body.dark-mode {
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #334155;
+  --panel: #0f172a;
+  --panel-soft: #111827;
+  background: linear-gradient(180deg, #0b1223 0%, #0b1223 100%);
+}
+
+body.dark-mode .app-main {
+  background: #111827;
+  border-color: #334155;
+}
+
+body.dark-mode .drop-zone,
+body.dark-mode .panel,
+body.dark-mode .preview-frame,
+body.dark-mode .field input[type="text"],
+body.dark-mode .file-item {
+  background: #0f172a;
+  border-color: #334155;
+  color: var(--text);
+}
+
+body.dark-mode .drop-zone:hover,
+body.dark-mode .drop-zone.drag-over,
+body.dark-mode .panel.drag-over {
+  background: #172036;
+}
+
+body.dark-mode .badge,
+body.dark-mode .order-btn,
+body.dark-mode .rotate-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #bfdbfe;
+}
+
+body.dark-mode .theme-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #bfdbfe;
+}
+
+body.dark-mode .modal {
+  background: rgba(2, 6, 23, 0.7);
+}
+
+body.dark-mode .drop-zone.drag-over::after,
+body.dark-mode .panel.drag-over::after {
+  background: rgba(30, 41, 59, 0.9);
+  color: #bfdbfe;
+  border-color: #60a5fa;
 }
 
 @media (max-width: 640px) {

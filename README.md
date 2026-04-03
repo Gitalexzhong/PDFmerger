@@ -1,18 +1,43 @@
-## Local PDF Merger
+## Local PDF and Image Merger
 
-A small web app to merge PDF files locally in your browser.
+Browser-only tool to merge PDFs and images into one downloadable PDF.
 
-- **Drag & drop** PDFs onto the page or use the browse button.
-- **Reorder files** via drag and drop to control the final PDF order.
-- **Merge in the browser** using `pdf-lib` – no servers, no uploads.
-- **Download and rename** the merged PDF before saving.
+## Features
 
-### Running it
+- Drag and drop **PDF + image files** (`jpg`, `jpeg`, `png`, `webp`, `gif`, etc.).
+- Reorder files with smooth pointer-drag sortable behavior.
+- Rotate image files (90-degree steps) before export.
+- Live merged preview in-browser.
+- Rename output file before download.
+- Light/dark mode toggle.
+- Info modal with quick **Share Link** button.
 
-- **Simplest**: open `index.html` directly in a modern browser (Chrome, Edge, Firefox).
-- **With a tiny local server** (optional, nicer dev workflow):
-  - Run `npm install` (optional, mainly to pin `pdf-lib`).
-  - Run `npm run start` and open the shown URL.
+All processing happens locally in your browser; no file uploads.
 
-Everything runs client‑side; your PDFs never leave your machine.
+## Run locally
+
+- Open `index.html` directly, or:
+- `npm install`
+- `npm run start`
+- Visit `http://localhost:3000` (or the URL printed by `serve`).
+
+## Deploy to Vercel
+
+Because this is a static app, Vercel deployment is straightforward:
+
+1. Install CLI (if needed): `npm i -g vercel`
+2. In this folder run: `vercel`
+3. Follow prompts (project name + team/account).
+4. For production deploy run: `vercel --prod`
+
+## GitHub upload (manual)
+
+If this folder is not already a git repo:
+
+1. `git init`
+2. `git add .`
+3. `git commit -m "Initial PDF/image merger app"`
+4. Create empty GitHub repo
+5. `git remote add origin <your-repo-url>`
+6. `git push -u origin main`
 
