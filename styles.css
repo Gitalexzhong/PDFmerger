@@ -121,6 +121,50 @@ body {
   flex-wrap: wrap;
 }
 
+.modal-content p {
+  margin: 10px 0 8px;
+  color: var(--text);
+}
+
+.modal-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.emoji-actions {
+  justify-content: flex-start;
+}
+
+.emoji-btn {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 10px;
+  font-size: 1.35rem;
+  background: #eff5ff;
+  border: 1px solid #c8daf8;
+  color: #1e3a8a;
+}
+
+.emoji-btn:hover {
+  background: #e2ecff;
+}
+
+.github-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.copyright-line {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .app-main {
   width: 100%;
   max-width: 1180px;
@@ -623,6 +667,16 @@ body.dark-mode .theme-btn {
   background: #1e293b;
   border-color: #334155;
   color: #bfdbfe;
+}
+
+body.dark-mode .emoji-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #bfdbfe;
+}
+
+body.dark-mode .emoji-btn:hover {
+  background: #263449;
 }
 
 body.dark-mode .modal {

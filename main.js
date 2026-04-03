@@ -484,7 +484,7 @@
   });
 
   async function copyShareLink() {
-    const url = window.location.href;
+    const url = "https://pdfmerger-alpha.vercel.app/";
     try {
       await navigator.clipboard.writeText(url);
       setStatus("Link copied to clipboard.", "success");
