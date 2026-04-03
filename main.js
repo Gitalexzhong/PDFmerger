@@ -22,6 +22,7 @@
   let previewUrl = null;
   let leftPaneDragDepth = 0;
   let selectedPanelDragDepth = 0;
+  let dropZoneDragDepth = 0;
 
   function getDraggedFileCount(dataTransfer) {
     if (!dataTransfer) return 0;
@@ -42,10 +43,23 @@
     }
   }
 
+  function setDropZoneFeedback(fileCountValue) {
+    if (fileCountValue > 0) {
+      const text = fileCountValue === 1 ? "Upload 1 file" : `Upload ${fileCountValue} files`;
+      dropZone.dataset.dropMessage = text;
+      dropZone.classList.add("drag-over");
+    } else {
+      dropZone.classList.remove("drag-over");
+      delete dropZone.dataset.dropMessage;
+    }
+  }
+
   function resetDropFeedback() {
     setSelectedPanelDropFeedback(0);
+    setDropZoneFeedback(0);
     leftPaneDragDepth = 0;
     selectedPanelDragDepth = 0;
+    dropZoneDragDepth = 0;
   }
 
   function generateDefaultOutputName() {
@@ -328,10 +342,39 @@
   });
 
   dropZone.addEventListener("dragover", (e) => {
+    const draggedCount = getDraggedFileCount(e.dataTransfer);
+    if (!draggedCount) return;
     e.preventDefault();
+    e.stopPropagation();
+    setDropZoneFeedback(draggedCount);
+    setSelectedPanelDropFeedback(0);
   });
-  dropZone.addEventListener("dragleave", () => {});
-  dropZone.addEventListener("drop", (e) => e.preventDefault());
+  dropZone.addEventListener("dragenter", (e) => {
+    const draggedCount = getDraggedFileCount(e.dataTransfer);
+    if (!draggedCount) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dropZoneDragDepth += 1;
+    setDropZoneFeedback(draggedCount);
+    setSelectedPanelDropFeedback(0);
+  });
+  dropZone.addEventListener("dragleave", (e) => {
+    const draggedCount = getDraggedFileCount(e.dataTransfer);
+    if (!draggedCount) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dropZoneDragDepth = Math.max(0, dropZoneDragDepth - 1);
+    if (dropZoneDragDepth === 0) {
+      setDropZoneFeedback(0);
+    }
+  });
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const incomingFiles = e.dataTransfer?.files;
+    resetDropFeedback();
+    if (incomingFiles) addFiles(incomingFiles);
+  });
 
   // Upload anywhere in left pane; show feedback on selected panel only.
   leftPane.addEventListener("dragenter", (e) => {
@@ -367,19 +410,24 @@
     const draggedCount = getDraggedFileCount(e.dataTransfer);
     if (!draggedCount) return;
     e.preventDefault();
+    e.stopPropagation();
     selectedPanelDragDepth += 1;
     setSelectedPanelDropFeedback(draggedCount);
+    setDropZoneFeedback(0);
   });
   selectedPanel.addEventListener("dragover", (e) => {
     const draggedCount = getDraggedFileCount(e.dataTransfer);
     if (!draggedCount) return;
     e.preventDefault();
+    e.stopPropagation();
     setSelectedPanelDropFeedback(draggedCount);
+    setDropZoneFeedback(0);
   });
   selectedPanel.addEventListener("dragleave", (e) => {
     const draggedCount = getDraggedFileCount(e.dataTransfer);
     if (!draggedCount) return;
     e.preventDefault();
+    e.stopPropagation();
     selectedPanelDragDepth = Math.max(0, selectedPanelDragDepth - 1);
     if (selectedPanelDragDepth === 0) {
       setSelectedPanelDropFeedback(0);
@@ -387,7 +435,10 @@
   });
   selectedPanel.addEventListener("drop", (e) => {
     e.preventDefault();
-    // Left pane handler performs the upload to avoid duplicates.
+    e.stopPropagation();
+    const incomingFiles = e.dataTransfer?.files;
+    resetDropFeedback();
+    if (incomingFiles) addFiles(incomingFiles);
   });
 
   window.addEventListener("drop", () => {

@@ -123,6 +123,23 @@ body {
 .drop-zone.drag-over {
   border-color: var(--accent-strong);
   background: #e8f2ff;
+  position: relative;
+}
+
+.drop-zone.drag-over::after {
+  content: "⤴ " attr(data-drop-message);
+  position: absolute;
+  inset: 8px;
+  border: 2px dashed #60a5fa;
+  border-radius: 12px;
+  background: rgba(239, 246, 255, 0.86);
+  color: #1d4ed8;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
 }
 
 .drop-zone-content {
