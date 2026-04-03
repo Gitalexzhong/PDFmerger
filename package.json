@@ -1,0 +1,14 @@
+{
+  "name": "local-pdf-merger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pure client-side PDF merger web app (drag & drop, reorder, merge, download) running fully in the browser.",
+  "scripts": {
+    "start": "npx serve .",
+    "preview": "npx serve ."
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  }
+}
+
