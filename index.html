@@ -5,76 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Local PDF Merger</title>
     <link rel="stylesheet" href="styles.css" />
-    <!-- pdf-lib for client-side PDF merging -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   </head>
   <body>
-    <div class="app">
-      <header class="app-header">
-        <h1>PDF Merger</h1>
-        <p>Merge PDFs locally in your browser. No uploads, no servers.</p>
-      </header>
-
-      <main class="app-main">
-        <section class="uploader">
-          <div id="drop-zone" class="drop-zone">
-            <div class="drop-zone-content">
-              <span class="drop-icon">📄</span>
-              <p class="drop-title">Drag &amp; drop PDF files here</p>
-              <p class="drop-subtitle">or</p>
-              <button id="browse-btn" class="btn primary">Browse files</button>
-              <input
-                id="file-input"
-                type="file"
-                accept="application/pdf"
-                multiple
-                hidden
-              />
-              <p class="drop-hint">
-                Files stay in your browser. You can reorder them below before
-                merging.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section class="file-list-section">
-          <div class="section-header">
-            <h2>Selected PDFs</h2>
-            <span id="file-count" class="badge">0 files</span>
-          </div>
-          <ul id="file-list" class="file-list" aria-live="polite"></ul>
-          <p id="empty-state" class="empty-state">
-            No files yet. Drag some PDFs into the box above or click
-            <strong>Browse files</strong>.
-          </p>
-        </section>
-
-        <section class="merge-controls">
-          <div class="merge-row">
-            <div class="field">
-              <label for="output-name">Output file name</label>
-              <input
-                id="output-name"
-                type="text"
-                placeholder="merged.pdf"
-                autocomplete="off"
-              />
-            </div>
-            <button id="merge-btn" class="btn primary" disabled>
-              Merge &amp; Download
-            </button>
-          </div>
-          <p id="status" class="status" aria-live="polite"></p>
-        </section>
-      </main>
-
-      <footer class="app-footer">
-        <span>Runs entirely in your browser. Safe for local PDFs.</span>
-      </footer>
-    </div>
-
-    <script src="main.js"></script>
+    <div id="root"></div>
+    <script type="text/babel" src="main.js"></script>
   </body>
 </html>
 

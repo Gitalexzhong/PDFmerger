@@ -1,258 +1,281 @@
-(() => {
-  const dropZone = document.getElementById("drop-zone");
-  const fileInput = document.getElementById("file-input");
-  const browseBtn = document.getElementById("browse-btn");
-  const fileListEl = document.getElementById("file-list");
-  const fileCountEl = document.getElementById("file-count");
-  const emptyStateEl = document.getElementById("empty-state");
-  const mergeBtn = document.getElementById("merge-btn");
-  const outputNameInput = document.getElementById("output-name");
-  const statusEl = document.getElementById("status");
+const { useEffect, useMemo, useRef, useState } = React;
 
-  /** @type {File[]} */
-  let files = [];
-  let dragSrcIndex = null;
+function generateDefaultOutputName() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const stamp =
+    [now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate())].join("") +
+    "-" +
+    [pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join("");
+  return `merged-${stamp}.pdf`;
+}
 
-  function updateStatus(message, type = "") {
-    statusEl.textContent = message || "";
-    statusEl.classList.remove("error", "success");
-    if (type) statusEl.classList.add(type);
-  }
+function App() {
+  const [files, setFiles] = useState([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [dragSrcIndex, setDragSrcIndex] = useState(null);
+  const [status, setStatus] = useState({ message: "", type: "" });
+  const [isMerging, setIsMerging] = useState(false);
+  const [outputName, setOutputName] = useState(generateDefaultOutputName());
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [lastMergedBlob, setLastMergedBlob] = useState(null);
+  const fileInputRef = useRef(null);
 
-  function updateFileCount() {
-    const count = files.length;
-    fileCountEl.textContent =
-      count === 0 ? "0 files" : `${count} file${count === 1 ? "" : "s"}`;
-  }
+  const fileCountLabel = useMemo(() => {
+    return files.length === 1 ? "1 file" : `${files.length} files`;
+  }, [files.length]);
 
-  function renderFileList() {
-    fileListEl.innerHTML = "";
-    files.forEach((file, index) => {
-      const li = document.createElement("li");
-      li.className = "file-item";
-      li.draggable = true;
-      li.dataset.index = String(index);
-
-      const handle = document.createElement("div");
-      handle.className = "file-handle";
-      handle.innerHTML = "<span>⋮</span><span>⋮</span>";
-
-      const meta = document.createElement("div");
-      meta.className = "file-meta";
-      const name = document.createElement("p");
-      name.className = "file-name";
-      name.textContent = file.name;
-      const sub = document.createElement("p");
-      sub.className = "file-sub";
-      const sizeKb = (file.size / 1024).toFixed(1);
-      sub.textContent = `${sizeKb} KB`;
-      meta.appendChild(name);
-      meta.appendChild(sub);
-
-      const actions = document.createElement("div");
-      actions.className = "file-actions";
-
-      const indexChip = document.createElement("span");
-      indexChip.className = "index-chip";
-      indexChip.textContent = `#${index + 1}`;
-
-      const removeBtn = document.createElement("button");
-      removeBtn.className = "remove-btn";
-      removeBtn.type = "button";
-      removeBtn.setAttribute("aria-label", `Remove ${file.name}`);
-      removeBtn.innerHTML = "✕";
-      removeBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        files.splice(index, 1);
-        updateUI();
-      });
-
-      actions.appendChild(indexChip);
-      actions.appendChild(removeBtn);
-
-      li.appendChild(handle);
-      li.appendChild(meta);
-      li.appendChild(actions);
-
-      attachDragEvents(li);
-      fileListEl.appendChild(li);
-    });
-  }
-
-  function updateUI() {
-    renderFileList();
-    updateFileCount();
-    emptyStateEl.style.display = files.length === 0 ? "block" : "none";
-    mergeBtn.disabled = files.length === 0;
-  }
-
-  function addFiles(fileList) {
+  const addFiles = (fileList) => {
     const incoming = Array.from(fileList).filter(
-      (f) => f.type === "application/pdf"
+      (file) => file.type === "application/pdf"
     );
     if (incoming.length === 0) {
-      updateStatus("Please drop PDF files only.", "error");
+      setStatus({ message: "Please select PDF files only.", type: "error" });
       return;
     }
-    files = files.concat(incoming);
-    updateStatus("");
-    updateUI();
-  }
+    setFiles((prev) => prev.concat(incoming));
+    setStatus({ message: "", type: "" });
+  };
 
-  function handleDrop(ev) {
-    ev.preventDefault();
-    ev.stopPropagation();
-    dropZone.classList.remove("drag-over");
-    if (ev.dataTransfer?.files && ev.dataTransfer.files.length > 0) {
-      addFiles(ev.dataTransfer.files);
-      ev.dataTransfer.clearData();
+  const normalizeOutputName = () => {
+    const name = (outputName || "").trim();
+    if (!name) return "merged.pdf";
+    return name.toLowerCase().endsWith(".pdf") ? name : `${name}.pdf`;
+  };
+
+  const buildMergedBlob = async (inputFiles) => {
+    if (inputFiles.length === 0) return null;
+    const { PDFDocument } = window.PDFLib || {};
+    if (!PDFDocument) throw new Error("PDF library failed to load.");
+
+    const mergedPdf = await PDFDocument.create();
+    for (const file of inputFiles) {
+      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      pages.forEach((page) => mergedPdf.addPage(page));
     }
-  }
+    const bytes = await mergedPdf.save();
+    return new Blob([bytes], { type: "application/pdf" });
+  };
 
-  function handleDragOver(ev) {
-    ev.preventDefault();
-    ev.stopPropagation();
-    ev.dataTransfer.dropEffect = "copy";
-    dropZone.classList.add("drag-over");
-  }
+  useEffect(() => {
+    let cancelled = false;
+    let currentUrl = "";
 
-  function handleDragLeave(ev) {
-    ev.preventDefault();
-    ev.stopPropagation();
-    if (ev.target === dropZone || !dropZone.contains(ev.relatedTarget)) {
-      dropZone.classList.remove("drag-over");
-    }
-  }
-
-  function attachDragEvents(item) {
-    item.addEventListener("dragstart", (e) => {
-      dragSrcIndex = Number(item.dataset.index);
-      item.classList.add("dragging");
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", String(dragSrcIndex));
-      }
-    });
-
-    item.addEventListener("dragend", () => {
-      item.classList.remove("dragging");
-    });
-
-    item.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      const targetIndex = Number(item.dataset.index);
-      if (dragSrcIndex === null || isNaN(targetIndex)) return;
-      item.style.borderColor = "rgba(96,165,250,0.9)";
-    });
-
-    item.addEventListener("dragleave", () => {
-      item.style.borderColor = "";
-    });
-
-    item.addEventListener("drop", (e) => {
-      e.preventDefault();
-      item.style.borderColor = "";
-      const targetIndex = Number(item.dataset.index);
-      const srcIndexRaw =
-        dragSrcIndex ??
-        (e.dataTransfer ? Number(e.dataTransfer.getData("text/plain")) : null);
-      if (
-        srcIndexRaw === null ||
-        isNaN(srcIndexRaw) ||
-        isNaN(targetIndex) ||
-        srcIndexRaw === targetIndex
-      ) {
+    const refreshPreview = async () => {
+      if (files.length === 0) {
+        setPreviewUrl("");
+        setLastMergedBlob(null);
         return;
       }
-      const [moved] = files.splice(srcIndexRaw, 1);
-      files.splice(targetIndex, 0, moved);
-      dragSrcIndex = null;
-      updateUI();
-    });
-  }
+      setStatus({ message: "Generating merged preview...", type: "" });
+      try {
+        const blob = await buildMergedBlob(files);
+        if (cancelled || !blob) return;
+        currentUrl = URL.createObjectURL(blob);
+        setPreviewUrl(currentUrl);
+        setLastMergedBlob(blob);
+        setStatus({ message: "Merged preview ready.", type: "success" });
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setPreviewUrl("");
+          setLastMergedBlob(null);
+          setStatus({
+            message: "Failed to generate merged preview.",
+            type: "error"
+          });
+        }
+      }
+    };
 
-  async function mergePdfs() {
+    refreshPreview();
+    return () => {
+      cancelled = true;
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [files]);
+
+  const onMergeDownload = async () => {
     if (files.length === 0) return;
+    setIsMerging(true);
+    setStatus({ message: "Preparing merged PDF download...", type: "" });
     try {
-      mergeBtn.disabled = true;
-      browseBtn.disabled = true;
-      updateStatus("Merging PDFs in your browser…");
-
-      const { PDFDocument } = window.PDFLib || {};
-      if (!PDFDocument) {
-        throw new Error("PDF library failed to load.");
-      }
-
-      const mergedPdf = await PDFDocument.create();
-
-      for (const file of files) {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await PDFDocument.load(arrayBuffer);
-        const copiedPages = await mergedPdf.copyPages(
-          pdf,
-          pdf.getPageIndices()
-        );
-        copiedPages.forEach((page) => mergedPdf.addPage(page));
-      }
-
-      const mergedBytes = await mergedPdf.save();
-      const blob = new Blob([mergedBytes], { type: "application/pdf" });
-
-      let outName = (outputNameInput.value || "").trim();
-      if (!outName.toLowerCase().endsWith(".pdf")) {
-        outName = outName ? `${outName}.pdf` : "merged.pdf";
-      }
+      const blob = lastMergedBlob || (await buildMergedBlob(files));
+      if (!blob) return;
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = outName;
+      a.download = normalizeOutputName();
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-
-      updateStatus("Merged PDF downloaded.", "success");
+      setStatus({ message: "Merged PDF downloaded.", type: "success" });
     } catch (err) {
       console.error(err);
-      updateStatus(
-        "Something went wrong while merging. Try smaller files or fewer PDFs.",
-        "error"
-      );
+      setStatus({
+        message: "Something went wrong while downloading merged PDF.",
+        type: "error"
+      });
     } finally {
-      mergeBtn.disabled = files.length === 0;
-      browseBtn.disabled = false;
+      setIsMerging(false);
     }
-  }
+  };
 
-  // Event wiring
-  dropZone.addEventListener("dragover", handleDragOver);
-  dropZone.addEventListener("dragleave", handleDragLeave);
-  dropZone.addEventListener("drop", handleDrop);
+  const removeAt = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  dropZone.addEventListener("click", () => {
-    fileInput.click();
-  });
+  const onDragStartItem = (index) => setDragSrcIndex(index);
+  const onDropItem = (targetIndex) => {
+    if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+    setFiles((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragSrcIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+    setDragSrcIndex(null);
+  };
 
-  browseBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    fileInput.click();
-  });
+  return (
+    <div className="app">
+      <header className="app-header">
+        <h1>PDF Merger (React)</h1>
+        <p>Merge PDFs locally in your browser. No uploads, no servers.</p>
+      </header>
 
-  fileInput.addEventListener("change", (e) => {
-    const target = e.target;
-    if (target && target.files) {
-      addFiles(target.files);
-      target.value = "";
-    }
-  });
+      <main className="app-main">
+        <section className="pane">
+          <section
+            className={`drop-zone ${dragOver ? "drag-over" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer?.files) addFiles(e.dataTransfer.files);
+            }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className="drop-zone-content">
+              <span className="drop-icon">📄</span>
+              <p className="drop-title">Drag and drop PDF files here</p>
+              <p className="drop-subtitle">or</p>
+              <button
+                className="btn primary"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                Browse files
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                multiple
+                hidden
+                onChange={(e) => {
+                  if (e.target.files) addFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <p className="drop-hint">Drag files in list to reorder merge order.</p>
+            </div>
+          </section>
 
-  mergeBtn.addEventListener("click", () => {
-    mergePdfs();
-  });
+          <section className="panel">
+            <div className="section-header">
+              <h2>Selected PDFs</h2>
+              <span className="badge">{fileCountLabel}</span>
+            </div>
+            <ul className="file-list">
+              {files.map((file, index) => (
+                <li
+                  key={`${file.name}-${index}`}
+                  className="file-item"
+                  draggable
+                  onDragStart={() => onDragStartItem(index)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => onDropItem(index)}
+                >
+                  <div className="file-handle">⋮⋮</div>
+                  <div className="file-meta">
+                    <p className="file-name">{file.name}</p>
+                    <p className="file-sub">{(file.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                  <span className="index-chip">#{index + 1}</span>
+                  <button
+                    className="remove-btn"
+                    type="button"
+                    onClick={() => removeAt(index)}
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {files.length === 0 ? (
+              <p className="empty-state">
+                No files yet. Add PDFs to begin creating merged preview.
+              </p>
+            ) : null}
+          </section>
+        </section>
 
-  // Set sensible default output name
-  outputNameInput.value = "merged.pdf";
-  updateUI();
-})();
+        <section className="pane">
+          <section className="panel">
+            <div className="merge-row">
+              <div className="field">
+                <label>Output file name</label>
+                <input
+                  type="text"
+                  value={outputName}
+                  onChange={(e) => setOutputName(e.target.value)}
+                  placeholder="merged-YYYYMMDD-HHMMSS.pdf"
+                />
+              </div>
+              <button
+                className="btn primary"
+                type="button"
+                disabled={files.length === 0 || isMerging}
+                onClick={onMergeDownload}
+              >
+                Merge and Download
+              </button>
+            </div>
+            <p className={`status ${status.type}`}>{status.message}</p>
+          </section>
+
+          <section className="panel preview-panel">
+            <div className="section-header">
+              <h2>Merged Preview</h2>
+            </div>
+            {previewUrl ? (
+              <iframe className="preview-frame" title="Merged PDF preview" src={previewUrl} />
+            ) : (
+              <div className="preview-empty">
+                Merged preview appears here after adding at least one PDF.
+              </div>
+            )}
+          </section>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
